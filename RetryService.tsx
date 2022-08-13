@@ -39,9 +39,8 @@ export class RetryService {
       try {
         cb();
       } catch (e) {
-        // This will block before retry count if new paramters are sent
         // The force_retry is called from original caller to see through
-        // the expected attempts.
+        // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
           // If backoff cb provided, apply it after first retry
           let y = this.computeInterval(interval, backOff);
