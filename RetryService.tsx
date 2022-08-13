@@ -42,14 +42,6 @@ export class RetryService {
         // The force_retry is called from original caller to see through
         // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
-          console.log(`true count ${this.trueCount(err, config)}`);
-          console.log({
-            retrying: this.computeInterval(attempt, interval, backOff),
-            attempt,
-            force_retry,
-            ...config
-          });
-          console.log(e);
           // If backoff cb provided, apply it after first retry
           await delay(this.computeInterval(attempt, interval, backOff));
           execute(attempt + 1, e, true);
@@ -57,7 +49,7 @@ export class RetryService {
         throw err;
       }
     };
-    execute(1, null, true);
+    execute(1);
   }
 
   shouldRetry(error: any, config: RetryConfiguration) {
@@ -87,10 +79,9 @@ export class RetryService {
   trueCount(error: any, config: RetryConfiguration) {
     const { count, statusCode } = config;
     try {
-      console.log(error);
       if (error && error.response && error.response.status && statusCode) {
         const code = parseInt(error.response.status, 10);
-        console.log(error.response.status, statusCode, code);
+        // Todo better dynamic interpretation of mask such as 5X0 or 50X cases
         const codeMask = `${(code / 100) >> 0}XX`;
         const codeMap = statusCode[code] || statusCode[codeMask];
         return codeMap.count;
