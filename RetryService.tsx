@@ -2,7 +2,7 @@
 interface RetryConfiguration {
   count: number;
   statusCode?: {
-    [key: string | number]: {
+    [key: string]: {
       count: number;
     };
   };
