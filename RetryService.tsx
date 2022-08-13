@@ -68,6 +68,7 @@ export class RetryService {
     );
     // block if match config exists and err msg exists and matches
     let resHasMessage = Boolean(error && error.message && match);
+    // Currently simple string match, could be extended for regex
     let wordMatchException = Boolean(
       resHasMessage && !error.message.toLowerCase().includes(match)
     );
