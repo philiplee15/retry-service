@@ -43,8 +43,7 @@ export class RetryService {
         // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
           // If backoff cb provided, apply it after first retry
-          let y = this.computeInterval(interval, backOff);
-          await delay(y);
+          await delay(this.computeInterval(interval, backOff));
           execute(attempt + 1, e, true);
         }
         throw err;
