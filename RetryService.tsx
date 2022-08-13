@@ -21,7 +21,7 @@ export class RetryService {
   defaultInterval = 3000;
 
   retry(
-    cb:Promise<any> | Function,
+    cb: () => void,
     config: RetryConfiguration = {
       count: this.defaultRetryCount,
       interval: this.defaultInterval
