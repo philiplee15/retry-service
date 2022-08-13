@@ -55,7 +55,7 @@ export class RetryService {
   shouldRetry(error: any, config: RetryConfiguration) {
     let { statusCode, match } = config;
 
-    // If has error code and matches config
+    // If has error code and matches config, masked code always takes precedence over number
     let resHasCode = error && error.response && error.response.status;
     let code = resHasCode ? parseInt(error.response.status, 10) : 0;
     let codeLevel = (code / 100) >> 0;
