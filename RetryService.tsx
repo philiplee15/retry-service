@@ -64,7 +64,7 @@ export class RetryService {
       resHasCode &&
       statusCode &&
       code &&
-      (codeMask in statusCode || code in statusCode);
+      (codeMask in statusCode || String(code) in statusCode);
 
     // if has err msg and matches, just a simple check no regex for now
     let resHasMessage = error && error.message && match;
