@@ -51,7 +51,7 @@ export class RetryService {
         throw err;
       }
     };
-    execute(1, null, true);
+    execute(1);
   }
 
   shouldRetry(error: any, config: RetryConfiguration) {
