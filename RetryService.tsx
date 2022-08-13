@@ -93,20 +93,31 @@ export class RetryService {
     );
   }
 }
+
 /**
- *  Test
-  let retryService = new RetryService();
-  retryService.retry(
-    () => {
-      throw new TypeError("UNKNOWN ERROR");
+let retryService = new RetryService();
+retryService.retry(
+  () => {
+    throw new TypeError("UNKNOWN ERROR");
+  },
+  {
+    count: 4,
+    match: "apple",
+    backOff: (n: number) => {
+      return n * n;
     },
-    {
-      count: 4,
-      match: "apple",
-      backOff: (n: number) => {
-        return n * n;
+    interval: 700,
+    statusCode: {
+      "500": {
+        count: 5
       },
-      interval: 700
+      "5xx": {
+        count: 6
+      },
+      "404": {
+        count: 3
+      }
     }
-  );
- */
+  }
+);
+*/
