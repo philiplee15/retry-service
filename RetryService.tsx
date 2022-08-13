@@ -18,7 +18,7 @@ interface RetryConfiguration {
 
 export class RetryService {
   defaultRetryCount = 4;
-  defaultInterval = 3000;
+  defaultInterval = 3;
 
   retry(
     cb: () => void,
@@ -42,83 +42,112 @@ export class RetryService {
         // The force_retry is called from original caller to see through
         // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
+          console.log(`true count ${this.trueCount(err, config)}`);
+          console.log({
+            retrying: this.computeInterval(attempt, interval, backOff),
+            attempt,
+            force_retry,
+            ...config
+          });
+          console.log(e);
           // If backoff cb provided, apply it after first retry
-          await delay(this.computeInterval(interval, backOff));
+          await delay(this.computeInterval(attempt, interval, backOff));
           execute(attempt + 1, e, true);
         }
         throw err;
       }
     };
-    execute(1);
+    execute(1, null, true);
   }
 
   shouldRetry(error: any, config: RetryConfiguration) {
-    let { statusCode, match } = config;
+    const { statusCode, match } = config;
 
-    // If has error code and matches config, masked code always takes precedence over number
-    let resHasCode = error && error.response && error.response.status;
-    let code = resHasCode ? parseInt(error.response.status, 10) : 0;
-    let codeLevel = (code / 100) >> 0;
-    let codeMask = `${codeLevel}XX`;
-    let statusCodeIsOkay =
+    // block if code config exists and err code exists and err code not in config
+    const resHasCode = error && error.response && error.response.status;
+    const code = resHasCode ? parseInt(error.response.status, 10) : 0;
+    const codeLevel = (code / 100) >> 0;
+    const codeMask = `${codeLevel}XX`;
+    const raiseCodeException = Boolean(
       resHasCode &&
-      statusCode &&
-      code &&
-      (codeMask in statusCode || String(code) in statusCode);
-
-    // if has err msg and matches, just a simple check no regex for now
-    let resHasMessage = error && error.message && match;
-    let hasAndIsWordMatch =
-      resHasMessage && error.message.toLowerCase().includes(match);
-
-    return statusCodeIsOkay && resHasMessage && hasAndIsWordMatch;
+        statusCode &&
+        !(codeMask in statusCode) &&
+        !(String(code) in statusCode)
+    );
+    // block if match config exists and err msg exists and matches
+    let resHasMessage = Boolean(error && error.message && match);
+    let wordMatchException = Boolean(
+      resHasMessage && !error.message.toLowerCase().includes(match)
+    );
+    if (raiseCodeException || wordMatchException) {
+      return false;
+    }
+    return true;
   }
   trueCount(error: any, config: RetryConfiguration) {
+    const { count, statusCode } = config;
     try {
-      if (config && config.statusCode) {
+      console.log(error);
+      if (error && error.response && error.response.status && statusCode) {
         const code = parseInt(error.response.status, 10);
+        console.log(error.response.status, statusCode, code);
         const codeMask = `${(code / 100) >> 0}XX`;
-        return config.statusCode[codeMask] || config.statusCode[code];
+        const codeMap = statusCode[code] || statusCode[codeMask];
+        return codeMap.count;
       } else {
-        return config.count || this.defaultRetryCount;
+        return count || this.defaultRetryCount;
       }
-    } catch {
+    } catch (e) {
       return this.defaultRetryCount;
     }
   }
-  computeInterval(interval: number | undefined, backOff: Function | undefined) {
-    return (
-      (interval && interval > 0 && backOff ? backOff(interval) : interval) |
-      this.defaultInterval
-    );
+  computeInterval(
+    attempt: number,
+    interval: number | undefined,
+    backOff: Function | undefined
+  ) {
+    let seconds = this.defaultInterval;
+    if (interval && attempt > 1 && backOff) {
+      let intervalRef = interval;
+      while (attempt - 1 > 0) {
+        seconds = backOff(intervalRef);
+        intervalRef = seconds;
+        attempt--;
+      }
+    } else if (typeof interval === "number") {
+      seconds = interval;
+    }
+    return seconds * 1000;
   }
 }
 
-/**
- * TEST
-let retryService = new RetryService();
-retryService.retry(
-  () => {
-    throw new TypeError("UNKNOWN ERROR");
-  },
-  {
-    count: 4,
-    match: "apple",
-    backOff: (n: number) => {
-      return n * n;
-    },
-    interval: 700,
-    statusCode: {
-      "500": {
-        count: 5
-      },
-      "5xx": {
-        count: 6
-      },
-      "404": {
-        count: 3
-      }
-    }
-  }
-);
-*/
+// let retryService = new RetryService();
+// retryService.retry(
+//   () => {
+//     throw {
+//       response: {
+//         status: 500,
+//         message: "test"
+//       }
+//     };
+//   },
+//   {
+//     count: 4,
+//     match: "permissiondenied",
+//     backOff: (n: number) => {
+//       return n * n;
+//     },
+//     interval: 2,
+//     statusCode: {
+//       "500": {
+//         count: 2
+//       },
+//       "5XX": {
+//         count: 3
+//       },
+//       "404": {
+//         count: 5
+//       }
+//     }
+//   }
+// );
