@@ -14,6 +14,7 @@ interface RetryConfiguration {
     | string;
   backOff?: Function;
   interval?: number;
+  fallback?: Function;
 }
 
 export class RetryService {
@@ -38,14 +39,21 @@ export class RetryService {
       try {
         cb();
       } catch (e) {
-        if (attempt > this.trueCount(err, config)) throw err;
+        if (attempt > this.trueCount(err, config)) {
+          const { fallback } = config;
+          if (fallback) {
+            return fallback();
+          } else {
+            throw err;
+          }
+        }
   
         // The force_retry is called from original caller to see through
         // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
           // If backoff cb provided, apply it after first retry
           await delay(this.computeInterval(attempt, interval, backOff));
-          execute(attempt + 1, e, true);
+          return execute(attempt + 1, e, true);
         }
         throw err;
       }
@@ -141,6 +149,9 @@ export class RetryService {
 //       "404": {
 //         count: 5
 //       }
-//     }
+//     },
+//    fallback: () => {
+//      console.log("fell back");
+//    }
 //   }
 // );
