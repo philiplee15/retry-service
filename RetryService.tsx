@@ -35,10 +35,11 @@ export class RetryService {
       err: any = null,
       force_retry: boolean = false
     ) => {
-      if (attempt > this.trueCount(err, config)) throw err;
       try {
         cb();
       } catch (e) {
+        if (attempt > this.trueCount(err, config)) throw err;
+  
         // The force_retry is called from original caller to see through
         // the expected attempts without being affected by a new error type
         if (this.shouldRetry(e, config) || force_retry) {
